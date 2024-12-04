@@ -2,12 +2,12 @@ import pandas as pd
 import streamlit as st
 from pymongo import MongoClient
 
-# MongoDB connection
-client = MongoClient("mongodb://localhost:27017/")  # Replace with your MongoDB connection string
-db = client["Movies-DB"]  # Replace with your database name
-collection = db["Movies-C"]  # Replace with your collection name
 
-# MongoDB Queries for Top 10 Emerging Stars and Genre Trends
+client = MongoClient("mongodb://localhost:27017/")  
+db = client["Movies-DB"]  
+collection = db["Movies-C"]  
+
+
 pipeline_actors = [
     {
         "$project": {
@@ -55,23 +55,23 @@ pipeline_genres = [
     {"$sort": {"_id.year": 1, "movie_count": -1}}
 ]
 
-# MongoDB query to filter movies based on selected conditions
+#Filter movies based on selected conditions
 def build_filter_query(imdb_min, year, genre, min_budget, max_budget):
     query = {}
     
-    # Filter by IMDb score
+    
     if imdb_min:
         query["imdb_score"] = {"$gte": imdb_min}
     
-    # Filter by year
+    
     if year:
         query["title_year"] = year
     
-    # Filter by genre (using regular expression for partial matches)
+    
     if genre:
         query["genres"] = {"$regex": genre, "$options": "i"}
     
-    # Filter by budget range
+    
     if min_budget and max_budget:
         query["budget"] = {"$gte": min_budget, "$lte": max_budget}
     
@@ -144,11 +144,11 @@ def delete_movie():
 # Streamlit App Layout
 st.title("Movie Insights Dashboard")
 
-# Create Tabs for User and Developer
+
 tab = st.radio("Select a tab", ["Movie Insights", "Developer Tab"])
 
 if tab == "Movie Insights":
-    # Add Filter Section (Sidebar)
+    
     st.sidebar.header("Filter Movies")
     imdb_min = st.sidebar.slider("IMDb Score", 0.0, 10.0, 7.5)
     year = st.sidebar.number_input("Year", min_value=1900, max_value=2023, value=2009)
@@ -156,13 +156,13 @@ if tab == "Movie Insights":
     min_budget = st.sidebar.number_input("Min Budget (in $)", min_value=0, value=50000000)
     max_budget = st.sidebar.number_input("Max Budget (in $)", min_value=0, value=200000000)
 
-    # Build the query based on the selected filters
+    
     query = build_filter_query(imdb_min, year, genre, min_budget, max_budget)
 
-    # Execute query for filtered movies
+    
     filtered_movies = list(collection.find(query, {"_id": 0, "movie_title": 1, "imdb_score": 1, "title_year": 1, "genres": 1, "budget": 1}))
 
-    # Display filtered movie results
+    
     if filtered_movies:
         st.subheader("Filtered Movies")
         filtered_movies_df = pd.DataFrame(filtered_movies)
@@ -170,16 +170,16 @@ if tab == "Movie Insights":
     else:
         st.write("No movies found matching the selected filters.")
 
-    # Buttons for navigation (using buttons for separate sections)
+    
     st.sidebar.header("Sections")
     show_actors = st.sidebar.button("Top 10 Emerging Stars", key="actors_button")
     show_genres = st.sidebar.button("Genre Trends Over Time", key="genres_button")
 
     if show_actors:
-        # Execute aggregation query for Top 10 Emerging Stars
+        
         results_actors = list(collection.aggregate(pipeline_actors))
 
-        # Process results and display
+        
         if results_actors:
             data_actors = pd.DataFrame(results_actors)
             data_actors.rename(columns={
@@ -187,16 +187,16 @@ if tab == "Movie Insights":
                 "total_movies": "Total Movies", "total_likes": "Total Likes"
             }, inplace=True)
             st.subheader("Top 10 Emerging Stars")
-            st.dataframe(data_actors)  # Display data table
+            st.dataframe(data_actors)  
             st.bar_chart(data_actors.set_index("Actor Name")["Total Likes"])
         else:
             st.write("No data available for Top 10 Emerging Stars.")
 
     elif show_genres:
-        # Execute aggregation query for Genre Trends Over Time
+        
         results_genres = list(collection.aggregate(pipeline_genres))
 
-        # Process results and display
+       
         if results_genres:
             data_genres = pd.DataFrame(results_genres)
             data_genres["Genre"] = data_genres["_id"].apply(lambda x: x["genre"])
@@ -204,24 +204,24 @@ if tab == "Movie Insights":
             data_genres.rename(columns={"movie_count": "Movie Count"}, inplace=True)
             data_genres.drop("_id", axis=1, inplace=True)
             st.subheader("Genre Trends Over Time")
-            st.dataframe(data_genres)  # Display data table
+            st.dataframe(data_genres)  
             genre_trends_pivot = data_genres.pivot(index="Year", columns="Genre", values="Movie Count").fillna(0)
             st.bar_chart(genre_trends_pivot)
         else:
             st.write("No data available for Genre Trends.")
 
 elif tab == "Developer Tab":
-    # Developer Tab for CRUD operations
+   
     st.sidebar.header("CRUD Operations")
     show_add = st.sidebar.button("Add Movie", key="add_button")
     show_update = st.sidebar.button("Update Movie", key="update_button")
     show_delete = st.sidebar.button("Delete Movie", key="delete_button")
 
     if show_add:
-        add_movie()  # Call the function to add a movie
+        add_movie()  
 
     elif show_update:
-        update_movie()  # Call the function to update movie details
+        update_movie()  
 
     elif show_delete:
-        delete_movie()  # Call the function to delete a movie
+        delete_movie()  
